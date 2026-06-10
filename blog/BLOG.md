@@ -4,6 +4,14 @@
 
 ---
 
+**📋 At a glance**
+
+- **Tech stack:** MySQL HeatWave AutoML (ML_TRAIN, ML_PREDICT_TABLE) · SQL · Python
+- **Database:** MySQL HeatWave 9.7 (9.7.0-cloud)
+- **Best for:** Training and scoring an ML model (e.g. churn) in pure SQL, with no data export.
+- **Level:** Beginner–Intermediate
+
+
 The usual ML loop exports features to a notebook, trains elsewhere, and stands up a model service. MySQL HeatWave keeps it all in the database: `ML_TRAIN` builds the model, `ML_PREDICT_TABLE` scores your rows. The data, the model, and the predictions never leave MySQL.
 
 ## 1) Train — one call
