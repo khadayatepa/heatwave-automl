@@ -6,6 +6,7 @@
 
 **📋 At a glance**
 
+- **📦 Repository:** [github.com/khadayatepa/heatwave-automl](https://github.com/khadayatepa/heatwave-automl)
 - **Tech stack:** MySQL HeatWave AutoML (ML_TRAIN, ML_PREDICT_TABLE) · SQL · Python
 - **Database:** MySQL HeatWave 9.7 (9.7.0-cloud)
 - **Prerequisites:** Python 3.10+, mysql-connector-python; HeatWave AutoML enabled
