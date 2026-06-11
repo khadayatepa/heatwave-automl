@@ -37,7 +37,37 @@ FROM customers_scored ORDER BY churn_prob DESC;</code></pre>
     <figcaption style="font-size:14px;color:#3f6b51;font-style:italic;margin-top:8px;">Trained and scored entirely inside MySQL HeatWave — the model correctly flags the high‑ticket, late‑paying BASIC customers.</figcaption>
   </figure>
 
-  <h2 style="color:#15803d;margin-top:30px;">Run it</h2>
+    <h2 style="color:#15803d;margin-top:32px;">🛠️ Do it yourself — step by step (manual SQL)</h2>
+  <p>Paste these into any MySQL client.</p>
+  <p><strong>1) Load labelled training data</strong></p>
+  <pre style="background:#0f172a;color:#e2e8f0;padding:13px;border-radius:9px;overflow:auto;font-size:12.5px;"><code>CREATE DATABASE IF NOT EXISTS heatwave_ai; USE heatwave_ai;
+CREATE TABLE churn_train (tenure_months INT, monthly_spend INT, support_tickets INT,
+                          late_payments INT, plan VARCHAR(20), churned INT);
+INSERT INTO churn_train VALUES
+ (4,39,9,4,'BASIC',1),(48,180,1,0,'ENTERPRISE',0),(11,70,5,2,'PRO',1),
+ (30,140,2,0,'PRO',0),(7,30,7,3,'BASIC',1),(36,160,1,0,'ENTERPRISE',0);
+-- (load as many labelled rows as you have)</code></pre>
+  <p><strong>2) Train the model (this can take a minute)</strong></p>
+  <pre style="background:#0f172a;color:#e2e8f0;padding:13px;border-radius:9px;overflow:auto;font-size:12.5px;"><code>CALL sys.ML_TRAIN('heatwave_ai.churn_train', 'churned',
+                  JSON_OBJECT('task','classification'), @model);
+SELECT @model;            -- the model handle</code></pre>
+  <p><strong>3) Load the model into HeatWave</strong></p>
+  <pre style="background:#0f172a;color:#e2e8f0;padding:13px;border-radius:9px;overflow:auto;font-size:12.5px;"><code>CALL sys.ML_MODEL_LOAD(@model, NULL);</code></pre>
+  <p><strong>4) Add the customers you want to score</strong></p>
+  <pre style="background:#0f172a;color:#e2e8f0;padding:13px;border-radius:9px;overflow:auto;font-size:12.5px;"><code>CREATE TABLE customers (name VARCHAR(40), tenure_months INT, monthly_spend INT,
+                        support_tickets INT, late_payments INT, plan VARCHAR(20));
+INSERT INTO customers VALUES
+ ('Aurora Labs',4,39,9,4,'BASIC'),('Brightpath Co',48,180,1,0,'ENTERPRISE');</code></pre>
+  <p><strong>5) Score them</strong></p>
+  <pre style="background:#0f172a;color:#e2e8f0;padding:13px;border-radius:9px;overflow:auto;font-size:12.5px;"><code>CALL sys.ML_PREDICT_TABLE('heatwave_ai.customers', @model,
+                          'heatwave_ai.customers_scored', NULL);</code></pre>
+  <p><strong>6) Read the predictions</strong></p>
+  <pre style="background:#0f172a;color:#e2e8f0;padding:13px;border-radius:9px;overflow:auto;font-size:12.5px;"><code>SELECT name,
+       ml_results -&gt;&gt; '$.predictions.churned'   AS churn,
+       ml_results -&gt;  '$.probabilities."1"'      AS churn_prob
+FROM customers_scored ORDER BY churn_prob DESC;</code></pre>
+
+<h2 style="color:#15803d;margin-top:30px;">Run it</h2>
   <pre style="background:#052e16;color:#bbf7d0;padding:14px;border-radius:10px;overflow:auto;font-size:13.5px;"><code>pip install -r requirements.txt
 copy .env.example .env     # MySQL HeatWave connection
 python automl.py</code></pre>

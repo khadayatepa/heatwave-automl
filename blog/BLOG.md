@@ -36,6 +36,62 @@ FROM customers_scored ORDER BY churn_prob DESC;
 ![Churn scoreboard: Aurora Labs 0.993 and Delta Foods 0.974 predicted to churn, down to Brightpath Co 0.002 predicted to stay](result.png)
 *Trained and scored entirely inside MySQL HeatWave — the model flags the high-ticket, late-paying BASIC customers.*
 
+## 🛠️ Do it yourself — step by step (manual SQL)
+
+Paste these into any MySQL client.
+
+**1) Load labelled training data**
+
+```sql
+CREATE DATABASE IF NOT EXISTS heatwave_ai; USE heatwave_ai;
+CREATE TABLE churn_train (tenure_months INT, monthly_spend INT, support_tickets INT,
+                          late_payments INT, plan VARCHAR(20), churned INT);
+INSERT INTO churn_train VALUES
+ (4,39,9,4,'BASIC',1),(48,180,1,0,'ENTERPRISE',0),(11,70,5,2,'PRO',1),
+ (30,140,2,0,'PRO',0),(7,30,7,3,'BASIC',1),(36,160,1,0,'ENTERPRISE',0);
+-- (load as many labelled rows as you have)
+```
+
+**2) Train the model (this can take a minute)**
+
+```sql
+CALL sys.ML_TRAIN('heatwave_ai.churn_train', 'churned',
+                  JSON_OBJECT('task','classification'), @model);
+SELECT @model;            -- the model handle
+```
+
+**3) Load the model into HeatWave**
+
+```sql
+CALL sys.ML_MODEL_LOAD(@model, NULL);
+```
+
+**4) Add the customers you want to score**
+
+```sql
+CREATE TABLE customers (name VARCHAR(40), tenure_months INT, monthly_spend INT,
+                        support_tickets INT, late_payments INT, plan VARCHAR(20));
+INSERT INTO customers VALUES
+ ('Aurora Labs',4,39,9,4,'BASIC'),('Brightpath Co',48,180,1,0,'ENTERPRISE');
+```
+
+**5) Score them**
+
+```sql
+CALL sys.ML_PREDICT_TABLE('heatwave_ai.customers', @model,
+                          'heatwave_ai.customers_scored', NULL);
+```
+
+**6) Read the predictions**
+
+```sql
+SELECT name,
+       ml_results ->> '$.predictions.churned'   AS churn,
+       ml_results ->  '$.probabilities."1"'      AS churn_prob
+FROM customers_scored ORDER BY churn_prob DESC;
+```
+
+
 ## Run it
 ```
 pip install -r requirements.txt
